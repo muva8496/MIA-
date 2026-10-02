@@ -1,0 +1,88 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User account and agent identity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "codename": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "authProvider": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastLoginAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email"]
+    },
+    "Profile": {
+      "title": "Profile",
+      "description": "Financial persona profile for budget and asset allocation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "emoji": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "ownerId"]
+    },
+    "Archetype": {
+      "title": "Archetype",
+      "description": "Impulse spend trigger archetype with matching multiplier rate",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "emoji": { "type": "string" },
+        "matchRate": { "type": "number" },
+        "ownerId": { "type": "string" },
+        "profileId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "matchRate", "ownerId", "profileId"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Logged intercept purchase and matching savings vault levy",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "itemName": { "type": "string" },
+        "baseCost": { "type": "number" },
+        "savingsLevy": { "type": "number" },
+        "totalOutflow": { "type": "number" },
+        "archetypeId": { "type": "string" },
+        "archetypeName": { "type": "string" },
+        "archetypeEmoji": { "type": "string" },
+        "matchRateSnapshot": { "type": "number" },
+        "isDirectDeposit": { "type": "boolean" },
+        "isWithdrawal": { "type": "boolean" },
+        "agentId": { "type": "string" },
+        "profileId": { "type": "string" },
+        "purchaseDate": { "type": "string" },
+        "loggedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "itemName", "baseCost", "savingsLevy", "agentId", "profileId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user agent credentials and profiles"
+    },
+    "/profiles/{profileId}": {
+      "schema": "Profile",
+      "description": "Collection of persona budget profiles"
+    },
+    "/archetypes/{archetypeId}": {
+      "schema": "Archetype",
+      "description": "Collection of spending archetypes"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Collection of spending intercepts and vault savings transactions"
+    }
+  }
+}

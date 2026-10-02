@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny catch-all (Phase 4 requirement)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // Health check & test connection path conforming to SKILL.md testConnection()
+    match /test/{docId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // User accounts collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || (resource != null && resource.data.email == request.auth.token.email));
+      allow list: if isSignedIn() && resource.data.id == request.auth.uid;
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidId(userId);
+      allow update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    // Persona profiles collection
+    match /profiles/{profileId} {
+      allow get: if isSignedIn() && (resource.data.ownerId == request.auth.uid || resource.data.ownerEmail == request.auth.token.email);
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || resource.data.ownerEmail == request.auth.token.email);
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid && isValidId(profileId);
+      allow update: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    // Spending archetypes collection
+    match /archetypes/{archetypeId} {
+      allow get: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid && isValidId(archetypeId);
+      allow update: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+    // Operation intercepts & savings transactions collection
+    match /transactions/{transactionId} {
+      allow get: if isSignedIn() && resource.data.agentId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.agentId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.agentId == request.auth.uid && isValidId(transactionId);
+      allow update: if isSignedIn() && resource.data.agentId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.agentId == request.auth.uid;
+    }
+
+    // Magic links collection
+    match /magicLinks/{tokenId} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}

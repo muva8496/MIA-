@@ -1,0 +1,6 @@
+{
+  "name": "M.I.A. — Micro-Investment Agency",
+  "description": "Gamified micro-savings platform: tax your vices to fund your assets with tactical archetypes, real-time levy calculations, and agency rank progression.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
