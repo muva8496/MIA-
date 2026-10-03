@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { CollectionMeta, DatabaseStats, Profile, User } from '../types';
 import { api } from '../services/api';
+import { AgencyLogo } from './AgencyLogo';
 
 interface DatabaseStudioViewProps {
   user: User;
@@ -352,10 +353,8 @@ export const DatabaseStudioView: React.FC<DatabaseStudioViewProps> = ({
       <div className="bg-gradient-to-r from-slate-900 via-slate-900/95 to-slate-950 border border-slate-800 rounded-2xl p-5 shadow-2xl relative overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="p-2 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-400">
-                <Database className="w-5 h-5" />
-              </span>
+            <div className="flex items-center gap-3">
+              <AgencyLogo size="sm" variant="icon" className="shrink-0" />
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-bold font-tactical text-slate-100 uppercase tracking-wide">

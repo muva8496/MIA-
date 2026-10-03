@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { User, Profile, Archetype, DashboardMetrics } from './types';
 import { api, getStoredToken, clearStoredToken, setStoredToken } from './services/api';
-import { AuthScreen } from './components/AuthScreen';
+import { AgencyLogo } from './components/AgencyLogo';
 import { Header } from './components/Header';
 import { DashboardView } from './components/DashboardView';
 import { ArchetypesManager } from './components/ArchetypesManager';
@@ -65,14 +65,40 @@ export default function App() {
         }
       } else {
         const storedToken = getStoredToken();
+        let authenticated = false;
         if (storedToken) {
           try {
             const res = await api.getMe();
-            if (isMounted) {
+            if (isMounted && res.user) {
               setUser(res.user);
+              authenticated = true;
             }
           } catch {
             clearStoredToken();
+          }
+        }
+
+        // Seamless auto-entrance: initialize primary operative account immediately
+        if (!authenticated && isMounted) {
+          try {
+            const demoRes = await api.demoLogin('agent.impulse@mia.gov', 'Agent Shadow (Solo)');
+            if (isMounted) {
+              setStoredToken(demoRes.token);
+              setUser(demoRes.user);
+            }
+          } catch (e) {
+            console.warn('Auto-entrance initialization notice:', e);
+            if (isMounted) {
+              const defaultUser: User = {
+                id: 'usr_agent_prime',
+                email: 'agent.impulse@mia.gov',
+                codename: 'Agent Shadow',
+                createdAt: new Date().toISOString(),
+                authProvider: 'demo',
+              };
+              setStoredToken(defaultUser.id);
+              setUser(defaultUser);
+            }
           }
         }
       }
@@ -169,37 +195,45 @@ export default function App() {
     }
   }, [activeProfile, fetchProfileData]);
 
+  const handleSwitchOperative = async (email: string, codename: string) => {
+    setDataLoading(true);
+    try {
+      const res = await api.demoLogin(email, codename);
+      setStoredToken(res.token);
+      setUser(res.user);
+      setActiveProfile(null);
+    } catch (err) {
+      console.error('Failed to switch operative:', err);
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     liveVoice.disconnect();
     await signOutFirebase();
     clearStoredToken();
-    setUser(null);
-    setProfiles([]);
-    setActiveProfile(null);
-    setArchetypes([]);
-    setDashboardMetrics(null);
+    handleSwitchOperative('agent.impulse@mia.gov', 'Agent Shadow (Solo)');
   };
 
-  if (authLoading) {
+  if (authLoading || !user) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 font-mono-code text-xs">
-        <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 px-5 py-3 rounded-xl shadow-xl">
-          <Shield className="w-5 h-5 text-emerald-400 animate-pulse" />
-          <span>AUTHENTICATING M.I.A. CLEARANCE...</span>
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 font-mono-code text-xs gap-3">
+        <AgencyLogo size="lg" variant="stacked" />
+        <div className="flex items-center gap-2.5 mt-4 text-emerald-400 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl shadow-xl">
+          <div className="w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <span>CONNECTING TO M.I.A. VAULT CORE...</span>
         </div>
       </div>
     );
   }
 
-  if (!user) {
-    return <AuthScreen onAuthenticated={(u) => setUser(u)} />;
-  }
-
   if (!activeProfile) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 font-mono-code text-xs">
-        <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 px-5 py-3 rounded-xl">
-          <Shield className="w-5 h-5 text-emerald-400 animate-spin" />
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 font-mono-code text-xs gap-3">
+        <AgencyLogo size="md" variant="icon" />
+        <div className="flex items-center gap-2.5 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl">
+          <div className="w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
           <span>LOADING OPERATIONAL PROFILE...</span>
         </div>
       </div>
@@ -228,6 +262,7 @@ export default function App() {
           }
         }}
         onLogout={handleLogout}
+        onSwitchOperative={handleSwitchOperative}
         isVoiceConnected={liveVoice.status === 'connected'}
       />
 

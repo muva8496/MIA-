@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Award, Shield, CheckCircle2, Lock } from 'lucide-react';
 import { AGENCY_RANKS, formatKsh } from '../utils/ranks';
 import { AgencyRank } from '../types';
+import { AgencyLogo } from './AgencyLogo';
 
 interface RankSystemModalProps {
   isOpen: boolean;
@@ -22,8 +23,8 @@ export const RankSystemModal: React.FC<RankSystemModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
       <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl p-6 relative max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-          <div className="flex items-center gap-2">
-            <Award className="w-5 h-5 text-emerald-400" />
+          <div className="flex items-center gap-3">
+            <AgencyLogo size="sm" variant="icon" />
             <div>
               <h3 className="text-base font-bold font-tactical text-slate-100 uppercase tracking-wide">
                 Agency Clearance Hierarchy

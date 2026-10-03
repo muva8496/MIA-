@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Shield, ChevronDown, Plus, Users, PlusCircle, LogOut, Radio, LayoutDashboard, Target, History, Award, Database, ArrowDownRight, Vault, Cloud, CheckCircle } from 'lucide-react';
+import { Shield, ChevronDown, Plus, Users, PlusCircle, LogOut, Radio, LayoutDashboard, Target, History, Award, Database, ArrowDownRight, Vault, Cloud, CheckCircle, UserCheck } from 'lucide-react';
 import { Profile, User } from '../types';
 import { formatKsh } from '../utils/ranks';
+import { AgencyLogo } from './AgencyLogo';
 
 interface HeaderProps {
   user: User;
@@ -16,6 +17,7 @@ interface HeaderProps {
   onOpenLogModal: () => void;
   onSelectTab: (tab: 'dashboard' | 'archetypes' | 'ledger' | 'ranks' | 'database' | 'voice') => void;
   onLogout: () => void;
+  onSwitchOperative?: (email: string, codename: string) => void;
   isVoiceConnected?: boolean;
 }
 
@@ -32,6 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenLogModal,
   onSelectTab,
   onLogout,
+  onSwitchOperative,
   isVoiceConnected = false,
 }) => {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -60,24 +63,10 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-4">
             <div 
               onClick={() => onSelectTab('dashboard')}
-              className="flex items-center gap-2.5 cursor-pointer group"
+              className="cursor-pointer group flex items-center"
+              title="M.I.A. Command Dashboard"
             >
-              <div className="w-9 h-9 rounded-lg bg-slate-900 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shadow-md shadow-emerald-950/50 group-hover:border-emerald-400 transition-colors">
-                <Shield className="w-5 h-5" />
-              </div>
-              <div className="hidden sm:block">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-base font-bold font-tactical text-slate-100 tracking-wider">
-                    M.I.A.
-                  </span>
-                  <span className="text-[10px] font-mono-code bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.2 rounded">
-                    OPS
-                  </span>
-                </div>
-                <p className="text-[10px] font-mono-code text-slate-400 tracking-wider">
-                  MICRO-INVESTMENT AGENCY
-                </p>
-              </div>
+              <AgencyLogo size="sm" variant="horizontal" />
             </div>
 
             {/* Profile Switcher Dropdown (FR-06, FR-07) */}
@@ -331,16 +320,62 @@ export const Header: React.FC<HeaderProps> = ({
                     </p>
                   </div>
 
+                  {/* Quick Operative Switcher */}
+                  <div className="px-3 py-2 border-b border-slate-800 text-[10px] font-mono-code text-slate-400">
+                    <span className="uppercase tracking-wider block mb-1.5 text-slate-500">SWITCH OPERATIVE PERSONA</span>
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          onSwitchOperative?.('agent.impulse@mia.gov', 'Agent Shadow (Solo)');
+                        }}
+                        className="w-full text-left px-2 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-emerald-400 flex items-center justify-between transition-colors text-xs"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <span>☕</span>
+                          <span>Agent Shadow</span>
+                        </span>
+                        <span className="text-[9px] text-slate-500">Solo</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          onSwitchOperative?.('agent.family_manager@mia.gov', 'Director Vanguard (Family)');
+                        }}
+                        className="w-full text-left px-2 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-emerald-400 flex items-center justify-between transition-colors text-xs"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <span>👨‍👩‍👧</span>
+                          <span>Director Vanguard</span>
+                        </span>
+                        <span className="text-[9px] text-slate-500">Family</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          onSwitchOperative?.('agent.coach_ops@mia.gov', 'Chief Falcon (Coach)');
+                        }}
+                        className="w-full text-left px-2 py-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-emerald-400 flex items-center justify-between transition-colors text-xs"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <span>📊</span>
+                          <span>Chief Falcon</span>
+                        </span>
+                        <span className="text-[9px] text-slate-500">Coach</span>
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="py-1">
                     <button
                       onClick={() => {
                         setUserMenuOpen(false);
                         onLogout();
                       }}
-                      className="w-full px-3 py-2 text-left text-xs text-rose-400 hover:bg-rose-950/40 flex items-center gap-2 cursor-pointer font-mono-code"
+                      className="w-full px-3 py-2 text-left text-xs text-amber-400 hover:bg-amber-950/40 flex items-center gap-2 cursor-pointer font-mono-code"
                     >
-                      <LogOut className="w-3.5 h-3.5" />
-                      <span>Terminate Session (Logout)</span>
+                      <UserCheck className="w-3.5 h-3.5" />
+                      <span>Switch / Reset Active Operative</span>
                     </button>
                   </div>
                 </div>

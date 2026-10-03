@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Profile, User, DashboardMetrics, Transaction } from '../types';
 import { OfficerVoice, VoiceTranscript } from '../hooks/useLiveVoice';
+import { AgencyLogo } from './AgencyLogo';
 
 interface VoiceCommsViewProps {
   user: User;
@@ -111,14 +112,16 @@ export const VoiceCommsView: React.FC<VoiceCommsViewProps> = ({
 
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 relative z-10">
           <div className="flex items-start gap-4">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center border transition-all ${
+            <AgencyLogo size="md" variant="icon" className="shrink-0 mt-0.5" />
+
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center border transition-all ${
               isConnected
                 ? 'bg-emerald-950 border-emerald-500/50 text-emerald-400 shadow-lg shadow-emerald-950/60 animate-pulse'
                 : isConnecting
                 ? 'bg-amber-950 border-amber-500/50 text-amber-400 animate-spin'
                 : 'bg-slate-950 border-slate-800 text-slate-500'
             }`}>
-              <Radio className="w-6 h-6" />
+              <Radio className="w-5 h-5" />
             </div>
 
             <div>

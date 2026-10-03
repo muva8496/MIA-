@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background & Shield Gradients -->
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#022c22" />
+      <stop offset="100%" stop-color="#051f18" />
+    </linearGradient>
+
+    <linearGradient id="emeraldNeon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="50%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+
+    <linearGradient id="goldVault" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde68a" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+
+    <linearGradient id="cyberBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="30%" stop-color="#10b981" />
+      <stop offset="70%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+
+    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#34d399" stop-opacity="0.8" />
+      <stop offset="40%" stop-color="#10b981" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0" />
+    </radialGradient>
+
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="intenseGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="14" result="blur1" />
+      <feGaussianBlur stdDeviation="4" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur1" />
+        <feMergeNode in="blur2" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Ambient Outer Glow -->
+  <circle cx="256" cy="256" r="210" fill="url(#coreGlow)" />
+
+  <!-- Outer Hexagonal Tactical Chassis -->
+  <polygon
+    points="256,24 456,120 456,360 256,488 56,360 56,120"
+    fill="url(#shieldGrad)"
+    stroke="url(#cyberBorder)"
+    stroke-width="8"
+    stroke-linejoin="round"
+  />
+
+  <!-- Secondary Inner Chassis Border with Cutout Notches -->
+  <polygon
+    points="256,48 432,134 432,346 256,460 80,346 80,134"
+    fill="none"
+    stroke="#064e3b"
+    stroke-width="3"
+    stroke-dasharray="16,8"
+  />
+
+  <!-- Top Tactical Crosshairs & Cardinal Ticks -->
+  <line x1="256" y1="10" x2="256" y2="40" stroke="#34d399" stroke-width="4" stroke-linecap="round" />
+  <line x1="256" y1="472" x2="256" y2="502" stroke="#34d399" stroke-width="4" stroke-linecap="round" />
+  <line x1="40" y1="240" x2="70" y2="240" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" />
+  <line x1="442" y1="240" x2="472" y2="240" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" />
+
+  <!-- Tactical Eagle Wings / Vanguard Chevrons (Top Wing Pair) -->
+  <path
+    d="M 110,160 L 256,86 L 402,160 L 372,192 L 256,134 L 140,192 Z"
+    fill="url(#emeraldNeon)"
+    filter="url(#neonGlow)"
+  />
+
+  <!-- Middle Wing Pair (Gold Accent) -->
+  <path
+    d="M 130,206 L 256,146 L 382,206 L 358,232 L 256,182 L 154,232 Z"
+    fill="url(#goldVault)"
+  />
+
+  <!-- Lower Vault Cradle / Support Chevrons -->
+  <path
+    d="M 150,330 L 256,410 L 362,330 L 342,308 L 256,370 L 170,308 Z"
+    fill="url(#emeraldNeon)"
+  />
+
+  <!-- Central Vault Dial Chamber (Outer Ring) -->
+  <circle
+    cx="256"
+    cy="256"
+    r="90"
+    fill="#031510"
+    stroke="url(#goldVault)"
+    stroke-width="6"
+  />
+
+  <!-- Vault Gear Iris / Mechanical Teeth -->
+  <g stroke="#34d399" stroke-width="3" opacity="0.85">
+    <line x1="256" y1="166" x2="256" y2="178" />
+    <line x1="256" y1="334" x2="256" y2="346" />
+    <line x1="166" y1="256" x2="178" y2="256" />
+    <line x1="334" y1="256" x2="346" y2="256" />
+    <line x1="192" y1="192" x2="201" y2="201" />
+    <line x1="320" y1="320" x2="311" y2="311" />
+    <line x1="192" y1="320" x2="201" y2="311" />
+    <line x1="320" y1="192" x2="311" y2="201" />
+  </g>
+
+  <!-- Central Vault Lock Core -->
+  <circle
+    cx="256"
+    cy="256"
+    r="64"
+    fill="#062e24"
+    stroke="#10b981"
+    stroke-width="4"
+  />
+
+  <!-- Inner High-Security Iris Blade Design -->
+  <polygon
+    points="256,204 296,236 280,286 232,286 216,236"
+    fill="#0f172a"
+    stroke="url(#goldVault)"
+    stroke-width="3"
+  />
+
+  <!-- Central Keyway / Tactical Micro-Investment Core -->
+  <polygon
+    points="256,224 274,256 256,288 238,256"
+    fill="#34d399"
+    filter="url(#intenseGlow)"
+  />
+
+  <circle cx="256" cy="256" r="8" fill="#ffffff" />
+
+  <!-- Corner Tech Accent Dots -->
+  <circle cx="92" cy="142" r="5" fill="#34d399" />
+  <circle cx="420" cy="142" r="5" fill="#34d399" />
+  <circle cx="420" cy="338" r="5" fill="#f59e0b" />
+  <circle cx="92" cy="338" r="5" fill="#f59e0b" />
+</svg>

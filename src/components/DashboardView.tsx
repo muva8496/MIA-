@@ -26,6 +26,7 @@ import {
 } from 'recharts';
 import { DashboardMetrics, Profile } from '../types';
 import { formatKsh } from '../utils/ranks';
+import { AgencyLogo } from './AgencyLogo';
 
 interface DashboardViewProps {
   metrics: DashboardMetrics | null;
@@ -83,22 +84,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="bg-gradient-to-r from-slate-900 via-slate-900/90 to-slate-950 border border-slate-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 w-64 h-full bg-emerald-500/5 blur-2xl pointer-events-none" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xl">{activeProfile.emoji}</span>
-              <span className="text-xs font-mono-code text-emerald-400 bg-emerald-950 border border-emerald-500/30 px-2 py-0.5 rounded">
-                OPERATIONAL VAULT
-              </span>
-              <span className="text-xs text-slate-400 font-mono-code">
-                AGENT CLEARANCE: {currentRank.code}
-              </span>
-            </div>
-            <h1 className="text-2xl font-bold font-tactical text-slate-100 tracking-wide">
-              {activeProfile.name} Command Center
-            </h1>
-            <p className="text-xs text-slate-400 font-mono-code mt-0.5">
-              Taxing discretionary vices into permanent capital reserves (Kenyan Shillings).
-            </p>
+          <div className="flex items-start gap-4">
+            <AgencyLogo size="lg" variant="icon" className="hidden sm:inline-flex mt-1 shrink-0" />
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xl">{activeProfile.emoji}</span>
+                <span className="text-xs font-mono-code text-emerald-400 bg-emerald-950 border border-emerald-500/30 px-2 py-0.5 rounded">
+                  OPERATIONAL VAULT
+                </span>
+                <span className="text-xs text-slate-400 font-mono-code">
+                  AGENT CLEARANCE: {currentRank.code}
+                </span>
+              </div>
+              <h1 className="text-2xl font-bold font-tactical text-slate-100 tracking-wide">
+                {activeProfile.name} Command Center
+              </h1>
+              <p className="text-xs text-slate-400 font-mono-code mt-0.5">
+                Taxing discretionary vices into permanent capital reserves (Kenyan Shillings).
+              </p>
 
             {/* Tactical Telemetry Chips with Withdrawn Amount */}
             <div className="flex flex-wrap items-center gap-2 mt-3 pt-2.5 border-t border-slate-800/70">
@@ -133,6 +136,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               )}
             </div>
           </div>
+        </div>
 
           <div className="flex items-center gap-3 self-start md:self-center">
             <button

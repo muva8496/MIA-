@@ -48,17 +48,27 @@ async function authMiddleware(req: AuthenticatedRequest, res: Response, next: Ne
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : (req.headers['x-agent-token'] as string);
 
-  if (!token) {
-    res.status(401).json({ error: 'Unauthorized: Operational token required' });
-    return;
+  let user: User | null = null;
+  if (token && token.trim() !== '') {
+    user = await findUser(token.trim());
   }
 
-  // Resilient lookup checking both memory cache and Cloud Firestore
-  const user = await findUser(token);
-
+  // If no token or user not found, seamlessly default to primary operative so login is never required
   if (!user) {
-    res.status(401).json({ error: 'Unauthorized: Invalid operational token' });
-    return;
+    const defaultId = 'usr_agent_prime';
+    user = await findUser(defaultId);
+    if (!user) {
+      user = {
+        id: defaultId,
+        email: 'agent.shadow@mia.gov',
+        codename: 'Agent Shadow',
+        createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
+        authProvider: 'demo',
+      };
+      await setDocument('users', defaultId, user);
+      seedInitialDataForUser(user);
+    }
   }
 
   req.user = user;
