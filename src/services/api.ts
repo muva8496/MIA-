@@ -69,7 +69,13 @@ export const api = {
     }),
 
   demoLogin: (email?: string, codename?: string) =>
-    request<{ success: boolean; token: string; user: User }>('/api/auth/demo-login', {
+    request<{ success: boolean; token: string; user: User; isNew?: boolean }>('/api/auth/demo-login', {
+      method: 'POST',
+      body: JSON.stringify({ email, codename }),
+    }),
+
+  emailLogin: (email: string, codename?: string) =>
+    request<{ success: boolean; token: string; user: User; isNew?: boolean }>('/api/auth/email-login', {
       method: 'POST',
       body: JSON.stringify({ email, codename }),
     }),

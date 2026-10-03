@@ -1,7 +1,22 @@
 import React, { useState } from 'react';
-import { Shield, Lock, Send, CheckCircle2, Terminal, ArrowRight, KeyRound, Sparkles, Database, Cloud } from 'lucide-react';
+import {
+  Shield,
+  Lock,
+  Send,
+  CheckCircle2,
+  Terminal,
+  ArrowRight,
+  KeyRound,
+  Sparkles,
+  Database,
+  Cloud,
+  UserCheck,
+  Zap,
+  AlertTriangle,
+  RefreshCw,
+} from 'lucide-react';
 import { api, setStoredToken } from '../services/api';
-import { signInWithGoogle, persistUserToFirestore } from '../services/firebase';
+import { signInWithGoogle } from '../services/firebase';
 import { seedInitialFirestoreDataForUser } from '../services/firestoreSync';
 import { User } from '../types';
 
@@ -10,26 +25,49 @@ interface AuthScreenProps {
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
+  const [activeTab, setActiveTab] = useState<'instant' | 'demo' | 'magic'>('instant');
   const [email, setEmail] = useState('');
   const [codename, setCodename] = useState('');
   const [magicSent, setMagicSent] = useState(false);
   const [magicToken, setMagicToken] = useState('');
-  const [magicUrl, setMagicUrl] = useState('');
   const [verifyingToken, setVerifyingToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [googleFallback, setGoogleFallback] = useState(false);
 
-  // Google Sign-In with Firebase Auth & Firestore persistence
+  // 1. Instant Email Login (1-Click, frictionless)
+  const handleInstantLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !email.includes('@')) {
+      setError('Please provide a valid intelligence email address (e.g. agent@mia.gov)');
+      return;
+    }
+    setError(null);
+    setLoading(true);
+
+    try {
+      const res = await api.emailLogin(email.trim(), codename.trim() || undefined);
+      setStoredToken(res.token);
+      onAuthenticated(res.user);
+    } catch (err: any) {
+      console.error('Instant email login error:', err);
+      setError(err.message || 'Operative authentication failed. Please retry.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2. Google Sign-In with Firebase Auth & Seamless Sandbox Fallback
   const handleGoogleSignIn = async () => {
     setError(null);
     setGoogleLoading(true);
 
     try {
-      // 1. Authenticate with Google via Firebase Popup
+      // Authenticate with Google via Firebase Popup
       const { user: firebaseUser } = await signInWithGoogle();
 
-      // 2. Persist to server backend & Firestore sync
+      // Persist to server backend & Firestore sync
       const res = await api.firebaseLogin({
         uid: firebaseUser.id,
         email: firebaseUser.email,
@@ -37,24 +75,32 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
         photoURL: firebaseUser.photoURL,
       });
 
-      // 3. If new user, seed Firestore cloud documents immediately
       if (res.isNew) {
         try {
           await seedInitialFirestoreDataForUser(res.user);
         } catch (seedErr) {
-          console.warn('[Firestore] Initial cloud seed completed with notices:', seedErr);
+          console.warn('[Firestore] Initial cloud seed notice:', seedErr);
         }
       }
 
       setStoredToken(res.token);
       onAuthenticated(res.user);
     } catch (err: any) {
-      console.error('Google Sign-In Error:', err);
-      // Helpful friendly message if popup closed by user
-      if (err.code === 'auth/popup-closed-by-user') {
-        setError('Authentication popup was closed. Please try again.');
-      } else if (err.code === 'auth/cancelled-popup-request') {
-        setError('Google sign-in was interrupted. Please retry.');
+      console.error('Google Sign-In Notice:', err);
+      const isIframeOrPopupIssue =
+        err?.code === 'auth/popup-blocked' ||
+        err?.code === 'auth/unauthorized-domain' ||
+        err?.code === 'auth/operation-not-allowed' ||
+        err?.code === 'auth/cancelled-popup-request' ||
+        err?.code === 'auth/popup-closed-by-user' ||
+        String(err?.message || '').toLowerCase().includes('popup') ||
+        String(err?.message || '').toLowerCase().includes('domain');
+
+      if (isIframeOrPopupIssue) {
+        setGoogleFallback(true);
+        setError(
+          'Google popup was restricted by sandbox iframe or popup policy. Click "Sandbox Google Clearance" below to authenticate instantly.'
+        );
       } else {
         setError(err.message || 'Google clearance authentication failed');
       }
@@ -63,6 +109,57 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
     }
   };
 
+  // Sandbox fallback for Google login inside restricted iframes
+  const handleSandboxGoogleLogin = async () => {
+    setError(null);
+    setGoogleLoading(true);
+
+    try {
+      const res = await api.firebaseLogin({
+        uid: 'google_operative_sandbox',
+        email: email.trim() && email.includes('@') ? email.trim() : 'operative.google@mia.gov',
+        displayName: codename.trim() || 'Google Operative Prime',
+        photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
+      });
+
+      setStoredToken(res.token);
+      onAuthenticated(res.user);
+    } catch (err: any) {
+      setError(err.message || 'Sandbox Google clearance failed');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  // 3. Fast Demo Personas (1-Click instant launch)
+  const handleDemoAccess = async (persona: 'solo' | 'family' | 'coach') => {
+    setError(null);
+    setLoading(true);
+
+    const emailMap = {
+      solo: 'agent.impulse@mia.gov',
+      family: 'agent.family_manager@mia.gov',
+      coach: 'agent.coach_ops@mia.gov',
+    };
+    const codenameMap = {
+      solo: 'Agent Shadow (Impulse Spender)',
+      family: 'Director Vanguard (Family Mgr)',
+      coach: 'Chief Falcon (Financial Coach)',
+    };
+
+    try {
+      const res = await api.demoLogin(emailMap[persona], codenameMap[persona]);
+      setStoredToken(res.token);
+      onAuthenticated(res.user);
+    } catch (err: any) {
+      console.error('Demo access error:', err);
+      setError(err.message || 'Demo clearance access failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 4. Encrypted Magic Link dispatch
   const handleSendMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !email.includes('@')) {
@@ -76,7 +173,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       const res = await api.sendMagicLink(email.trim(), codename.trim() || undefined);
       setMagicSent(true);
       setMagicToken(res.token);
-      setMagicUrl(res.magicUrl);
     } catch (err: any) {
       setError(err.message || 'Failed to dispatch magic link');
     } finally {
@@ -100,34 +196,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
     }
   };
 
-  const handleDemoAccess = async (persona: 'solo' | 'family' | 'coach') => {
-    setError(null);
-    setLoading(true);
-
-    const emailMap = {
-      solo: 'agent.impulse@mia.gov',
-      family: 'agent.family_manager@mia.gov',
-      coach: 'agent.coach_ops@mia.gov',
-    };
-    const codenameMap = {
-      solo: 'Agent Shadow (Impulse Spender)',
-      family: 'Director Vanguard (Family Mgr)',
-      coach: 'Chief Falcon (Financial Coach)',
-    };
-
-    try {
-      const res = await api.demoLogin(emailMap[persona], codenameMap[persona]);
-      setStoredToken(res.token);
-      onAuthenticated(res.user);
-    } catch (err: any) {
-      setError(err.message || 'Demo clearance access failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-12 classified-grid relative overflow-hidden">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-10 classified-grid relative overflow-hidden">
       {/* Background ambient lighting */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-80 h-80 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -135,12 +205,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       <div className="w-full max-w-md relative z-10">
         {/* Brand Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-900 border border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/10 mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-900 border border-emerald-500/30 text-emerald-400 shadow-lg shadow-emerald-500/10 mb-3">
             <Shield className="w-8 h-8" />
           </div>
           <div className="flex items-center justify-center gap-2 mb-1">
             <span className="px-2 py-0.5 text-[11px] font-mono-code bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 rounded">
-              CONFIDENTIAL // CLEARANCE REQ
+              CONFIDENTIAL // CLEARANCE REQUIRED
             </span>
           </div>
           <h1 className="text-3xl font-bold font-tactical tracking-wider text-slate-100 uppercase">
@@ -149,7 +219,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
           <p className="text-xs font-mono-code text-slate-400 tracking-widest mt-0.5">
             MICRO-INVESTMENT AGENCY
           </p>
-          <p className="text-sm text-slate-400 mt-2 max-w-xs mx-auto">
+          <p className="text-xs text-slate-400 mt-2 max-w-xs mx-auto">
             Tax your vices to fund your assets. Covert micro-savings intelligence system.
           </p>
 
@@ -165,23 +235,36 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
           <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-5">
             <div className="flex items-center gap-2 text-xs font-mono-code text-slate-300">
               <Terminal className="w-4 h-4 text-emerald-400" />
-              <span>TERMINAL: AUTH_FIREBASE_V2.0</span>
+              <span>TERMINAL: AUTH_GATE_V2.1</span>
             </div>
-            <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[10px] font-mono-code text-slate-400">READY</span>
+            </div>
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-rose-950/60 border border-rose-500/40 rounded-lg text-xs font-mono-code text-rose-300 flex items-start gap-2">
-              <span className="text-rose-400 font-bold">ERR:</span>
-              <span>{error}</span>
+            <div className="mb-5 p-3.5 bg-rose-950/70 border border-rose-500/50 rounded-lg text-xs font-mono-code text-rose-200 flex flex-col gap-2">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{error}</span>
+              </div>
+              {googleFallback && (
+                <button
+                  type="button"
+                  onClick={handleSandboxGoogleLogin}
+                  disabled={googleLoading}
+                  className="mt-1 w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 px-3 rounded text-xs font-tactical uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                >
+                  <UserCheck className="w-4 h-4" />
+                  <span>Authenticate With Sandbox Google Clearance</span>
+                </button>
+              )}
             </div>
           )}
 
-          {/* PRIMARY AUTH METHOD: Google Sign-In with Firebase Auth */}
-          <div className="space-y-4 mb-6">
+          {/* GOOGLE SIGN IN BUTTON */}
+          <div className="space-y-2 mb-5">
             <button
               onClick={handleGoogleSignIn}
               disabled={googleLoading || loading}
@@ -220,44 +303,89 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
               )}
             </button>
             <p className="text-[10px] text-center text-slate-400 font-mono-code">
-              Uses Firebase Authentication & links your identity to Firestore
+              OAuth 2.0 Google Identity with Firestore persistence
             </p>
           </div>
 
-          <div className="relative my-5">
+          <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-800"></div>
             </div>
             <div className="relative flex justify-center text-[10px] uppercase font-mono-code">
-              <span className="bg-slate-900 px-3 text-slate-500">Or Manual Operative Access</span>
+              <span className="bg-slate-900 px-3 text-slate-500">OPERATIVE CLEARANCE MODES</span>
             </div>
           </div>
 
-          {!magicSent ? (
-            <form onSubmit={handleSendMagicLink} className="space-y-4">
+          {/* Navigation Tabs */}
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-950/80 rounded-lg border border-slate-800 mb-5">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('instant');
+                setError(null);
+              }}
+              className={`py-1.5 text-xs font-mono-code rounded transition-all cursor-pointer ${
+                activeTab === 'instant'
+                  ? 'bg-emerald-600 text-slate-950 font-bold shadow'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Direct Email
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('demo');
+                setError(null);
+              }}
+              className={`py-1.5 text-xs font-mono-code rounded transition-all cursor-pointer ${
+                activeTab === 'demo'
+                  ? 'bg-emerald-600 text-slate-950 font-bold shadow'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Test Personas
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('magic');
+                setError(null);
+              }}
+              className={`py-1.5 text-xs font-mono-code rounded transition-all cursor-pointer ${
+                activeTab === 'magic'
+                  ? 'bg-emerald-600 text-slate-950 font-bold shadow'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Magic Token
+            </button>
+          </div>
+
+          {/* TAB 1: Instant Direct Email Login */}
+          {activeTab === 'instant' && (
+            <form onSubmit={handleInstantLogin} className="space-y-4">
               <div>
                 <label className="block text-xs font-mono-code text-slate-300 mb-1.5 uppercase">
-                  Target Operative Email
+                  Operative Email Address
                 </label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    required
-                    placeholder="agent@agency.ops or your-email@domain.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-mono-code"
-                  />
-                </div>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. agent.smith@mia.gov or user@gmail.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-mono-code"
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-mono-code text-slate-300 mb-1.5 uppercase">
-                  Operative Codename <span className="text-slate-500">(Optional)</span>
+                  Codename <span className="text-slate-500 font-normal">(Optional)</span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g., Agent Maverick"
+                  placeholder="e.g. Agent Maverick"
                   value={codename}
                   onChange={(e) => setCodename(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
@@ -267,113 +395,193 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
               <button
                 type="submit"
                 disabled={loading || googleLoading}
-                className="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-sm uppercase tracking-wider font-tactical transition-colors cursor-pointer disabled:opacity-50"
+                className="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 text-sm uppercase tracking-wider font-tactical transition-colors cursor-pointer disabled:opacity-50 shadow-lg shadow-emerald-950"
               >
                 {loading ? (
-                  <span>DISPATCHING CLEARANCE...</span>
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>AUTHENTICATING CLEARANCE...</span>
+                  </div>
                 ) : (
                   <>
-                    <Send className="w-4 h-4" />
-                    <span>TRANSMIT MAGIC LINK</span>
+                    <Zap className="w-4 h-4" />
+                    <span>AUTHENTICATE & ENTER VAULT</span>
+                    <ArrowRight className="w-4 h-4 ml-1" />
                   </>
                 )}
               </button>
+              <p className="text-[10px] text-center text-slate-500 font-mono-code">
+                Instant authorization. Creates new clearance or resumes existing vault records.
+              </p>
             </form>
-          ) : (
-            <div className="space-y-4 text-center">
-              <div className="w-12 h-12 bg-emerald-950 border border-emerald-500/50 rounded-full flex items-center justify-center mx-auto text-emerald-400">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <h3 className="text-base font-bold text-slate-100 font-tactical">
-                MAGIC LINK GENERATED
-              </h3>
-              <p className="text-xs text-slate-400 font-mono-code">
-                Encrypted magic link dispatched for <span className="text-emerald-400">{email}</span>. Click below to verify instantly.
+          )}
+
+          {/* TAB 2: Instant Test Personas */}
+          {activeTab === 'demo' && (
+            <div className="space-y-3">
+              <p className="text-xs text-slate-400 font-mono-code mb-2">
+                Select an operative profile for immediate 1-click evaluation:
               </p>
 
-              {/* Instant Verification Button */}
               <button
-                onClick={() => handleVerifyToken(magicToken)}
-                disabled={loading}
-                className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-sm uppercase tracking-wider font-tactical transition-colors cursor-pointer"
+                type="button"
+                onClick={() => handleDemoAccess('solo')}
+                disabled={loading || googleLoading}
+                className="w-full p-3 bg-slate-950 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/60 rounded-xl text-left transition-all cursor-pointer group flex items-center gap-3.5"
               >
-                <KeyRound className="w-4 h-4" />
-                <span>CONFIRM CLEARANCE & ENTER VAULT</span>
+                <div className="w-10 h-10 rounded-lg bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
+                  ☕
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold font-tactical tracking-wide text-slate-200 group-hover:text-emerald-400">
+                      Agent Shadow
+                    </span>
+                    <span className="text-[10px] font-mono-code text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800/50">
+                      1-CLICK
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    Solo Impulse Spender • Pre-seeded coffee & snack vices
+                  </p>
+                </div>
               </button>
 
-              <div className="pt-2 border-t border-slate-800 text-left">
-                <p className="text-[11px] font-mono-code text-slate-400 mb-1">
-                  MANUAL VERIFICATION CODE:
-                </p>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={verifyingToken || magicToken}
-                    onChange={(e) => setVerifyingToken(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-300 font-mono-code"
-                  />
-                  <button
-                    onClick={() => handleVerifyToken(verifyingToken || magicToken)}
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-mono-code text-slate-200 rounded border border-slate-700 cursor-pointer"
-                  >
-                    Verify
-                  </button>
+              <button
+                type="button"
+                onClick={() => handleDemoAccess('family')}
+                disabled={loading || googleLoading}
+                className="w-full p-3 bg-slate-950 hover:bg-slate-800/90 border border-slate-800 hover:border-blue-500/60 rounded-xl text-left transition-all cursor-pointer group flex items-center gap-3.5"
+              >
+                <div className="w-10 h-10 rounded-lg bg-blue-950/60 border border-blue-500/30 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
+                  👨‍👩‍👦
                 </div>
-              </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold font-tactical tracking-wide text-slate-200 group-hover:text-blue-400">
+                      Director Vanguard
+                    </span>
+                    <span className="text-[10px] font-mono-code text-blue-400 bg-blue-950/80 px-1.5 py-0.5 rounded border border-blue-800/50">
+                      1-CLICK
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    Multi-Profile Manager • Family Vaults & Shared Goals
+                  </p>
+                </div>
+              </button>
 
               <button
-                onClick={() => setMagicSent(false)}
-                className="text-xs text-slate-500 hover:text-slate-400 underline font-mono-code cursor-pointer"
+                type="button"
+                onClick={() => handleDemoAccess('coach')}
+                disabled={loading || googleLoading}
+                className="w-full p-3 bg-slate-950 hover:bg-slate-800/90 border border-slate-800 hover:border-amber-500/60 rounded-xl text-left transition-all cursor-pointer group flex items-center gap-3.5"
               >
-                Use different email address
+                <div className="w-10 h-10 rounded-lg bg-amber-950/60 border border-amber-500/30 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
+                  📊
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold font-tactical tracking-wide text-slate-200 group-hover:text-amber-400">
+                      Chief Falcon
+                    </span>
+                    <span className="text-[10px] font-mono-code text-amber-400 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-800/50">
+                      1-CLICK
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    Financial Advisor & Coach • Multiple client oversight
+                  </p>
+                </div>
               </button>
             </div>
           )}
 
-          {/* Quick Demo Personas */}
-          <div className="mt-6 pt-5 border-t border-slate-800">
-            <p className="text-[11px] font-mono-code text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>Instant Test Agent Access</span>
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => handleDemoAccess('solo')}
-                disabled={loading || googleLoading}
-                className="p-2 bg-slate-950/80 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 rounded-lg text-left transition-all cursor-pointer group"
-              >
-                <span className="text-base block mb-0.5">☕</span>
-                <span className="block text-[11px] font-bold text-slate-200 group-hover:text-emerald-400">
-                  Impulse Spender
-                </span>
-                <span className="block text-[9px] text-slate-500 font-mono-code">18-35 Solo</span>
-              </button>
+          {/* TAB 3: Encrypted Magic Link */}
+          {activeTab === 'magic' && (
+            <div>
+              {!magicSent ? (
+                <form onSubmit={handleSendMagicLink} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-mono-code text-slate-300 mb-1.5 uppercase">
+                      Email For Encrypted Link
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="operative@agency.ops"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-mono-code"
+                    />
+                  </div>
 
-              <button
-                onClick={() => handleDemoAccess('family')}
-                disabled={loading || googleLoading}
-                className="p-2 bg-slate-950/80 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 rounded-lg text-left transition-all cursor-pointer group"
-              >
-                <span className="text-base block mb-0.5">👨‍👩‍👦</span>
-                <span className="block text-[11px] font-bold text-slate-200 group-hover:text-emerald-400">
-                  Family Manager
-                </span>
-                <span className="block text-[9px] text-slate-500 font-mono-code">Multi-Profile</span>
-              </button>
+                  <button
+                    type="submit"
+                    disabled={loading || googleLoading}
+                    className="w-full bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-xs uppercase tracking-wider font-mono-code transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <span>DISPATCHING CLEARANCE...</span>
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        <span>DISPATCH ENCRYPTED MAGIC LINK</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                <div className="space-y-4 text-center">
+                  <div className="w-12 h-12 bg-emerald-950 border border-emerald-500/50 rounded-full flex items-center justify-center mx-auto text-emerald-400">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-100 font-tactical">
+                    MAGIC LINK GENERATED
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono-code">
+                    Encrypted clearance token ready for <span className="text-emerald-400">{email}</span>.
+                  </p>
 
-              <button
-                onClick={() => handleDemoAccess('coach')}
-                disabled={loading || googleLoading}
-                className="p-2 bg-slate-950/80 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 rounded-lg text-left transition-all cursor-pointer group"
-              >
-                <span className="text-base block mb-0.5">📊</span>
-                <span className="block text-[11px] font-bold text-slate-200 group-hover:text-emerald-400">
-                  Advisor / Coach
-                </span>
-                <span className="block text-[9px] text-slate-500 font-mono-code">Client Vaults</span>
-              </button>
+                  <button
+                    onClick={() => handleVerifyToken(magicToken)}
+                    disabled={loading}
+                    className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-xs uppercase tracking-wider font-tactical transition-colors cursor-pointer"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                    <span>CONFIRM CLEARANCE & ENTER VAULT</span>
+                  </button>
+
+                  <div className="pt-2 border-t border-slate-800 text-left">
+                    <p className="text-[10px] font-mono-code text-slate-400 mb-1">
+                      MANUAL TOKEN INPUT:
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={verifyingToken || magicToken}
+                        onChange={(e) => setVerifyingToken(e.target.value)}
+                        className="flex-1 bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-xs text-slate-300 font-mono-code"
+                      />
+                      <button
+                        onClick={() => handleVerifyToken(verifyingToken || magicToken)}
+                        className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs font-mono-code text-slate-200 rounded border border-slate-700 cursor-pointer"
+                      >
+                        Verify
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setMagicSent(false)}
+                    className="text-xs text-slate-500 hover:text-slate-400 underline font-mono-code cursor-pointer"
+                  >
+                    Use different email address
+                  </button>
+                </div>
+              )}
             </div>
-          </div>
+          )}
         </div>
 
         {/* Footer info with Firestore Database badge */}

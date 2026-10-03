@@ -114,8 +114,8 @@ export default function App() {
     if (!user) return;
     try {
       const res = await api.getProfiles();
-      setProfiles(res.profiles);
-      if (res.profiles.length > 0) {
+      if (res.profiles && res.profiles.length > 0) {
+        setProfiles(res.profiles);
         // Keep activeProfile if it still exists, else pick first
         setActiveProfile((prev) => {
           if (prev && res.profiles.some((p) => p.id === prev.id)) {
@@ -123,6 +123,16 @@ export default function App() {
           }
           return res.profiles[0];
         });
+      } else {
+        try {
+          const newProf = await api.createProfile('My Account', '🕵️‍♂️');
+          if (newProf?.profile) {
+            setProfiles([newProf.profile]);
+            setActiveProfile(newProf.profile);
+          }
+        } catch (createErr) {
+          console.warn('Could not auto-create starter profile:', createErr);
+        }
       }
     } catch (err) {
       console.error('Error loading profiles:', err);

@@ -173,30 +173,93 @@ app.post('/api/auth/verify-magic-link', async (req: Request, res: Response) => {
   });
 });
 
-// Demo login for fast preview
-app.post('/api/auth/demo-login', async (req: Request, res: Response) => {
-  const db = getDb();
-  const email = (req.body.email || 'agent.shadow@mia.gov').trim().toLowerCase();
-  const codename = req.body.codename || 'Agent Shadow';
+// Direct Email Login & Auto-Registration
+app.post('/api/auth/email-login', async (req: Request, res: Response) => {
+  const { email, codename } = req.body;
+  if (!email || typeof email !== 'string' || !email.includes('@')) {
+    res.status(400).json({ error: 'Valid operative email address required' });
+    return;
+  }
 
-  // Check if user already exists
-  let user = await findUser(email);
+  const cleanEmail = email.trim().toLowerCase();
+  let user = await findUser(cleanEmail);
+  let isNew = false;
+
   if (!user) {
-    const userId = 'usr_agent_prime';
+    const userId = 'usr_' + Math.random().toString(36).substring(2, 10);
     user = {
       id: userId,
-      email,
-      codename,
+      email: cleanEmail,
+      codename: codename?.trim() || ('Agent ' + cleanEmail.split('@')[0].toUpperCase()),
       createdAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+      authProvider: 'magic_link',
     };
     await setDocument('users', userId, user);
+    isNew = true;
     seedInitialDataForUser(user);
+  } else {
+    user.lastLoginAt = new Date().toISOString();
+    if (codename && codename.trim()) {
+      user.codename = codename.trim();
+    }
+    await setDocument('users', user.id, user);
   }
 
   res.json({
     success: true,
     token: user.id,
     user,
+    isNew,
+  });
+});
+
+// Demo login for fast preview
+app.post('/api/auth/demo-login', async (req: Request, res: Response) => {
+  const email = (req.body.email || 'agent.shadow@mia.gov').trim().toLowerCase();
+  const codename = req.body.codename || 'Agent Shadow';
+
+  // Check if user already exists
+  let user = await findUser(email);
+  let isNew = false;
+  if (!user) {
+    // Generate clean stable ID per persona email
+    const cleanPrefix = email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '_');
+    const userId = `usr_${cleanPrefix}`;
+    user = {
+      id: userId,
+      email,
+      codename,
+      createdAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+      authProvider: 'demo',
+    };
+    await setDocument('users', userId, user);
+    isNew = true;
+    seedInitialDataForUser(user);
+
+    // If family manager, add a second profile for immediate family management preview
+    if (email.includes('family')) {
+      const familyProfileId = 'prof_family_shared';
+      const familyProfile: Profile = {
+        id: familyProfileId,
+        name: 'Family Operations',
+        emoji: '👨‍👩‍👧',
+        ownerId: userId,
+        createdAt: new Date().toISOString(),
+      };
+      await setDocument('profiles', familyProfileId, familyProfile);
+    }
+  } else {
+    user.lastLoginAt = new Date().toISOString();
+    await setDocument('users', user.id, user);
+  }
+
+  res.json({
+    success: true,
+    token: user.id,
+    user,
+    isNew,
   });
 });
 

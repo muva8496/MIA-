@@ -16,10 +16,26 @@ import {
   Unsubscribe,
 } from 'firebase/firestore';
 
-// Set Firestore log level to avoid benign idle stream disconnection warnings
+// Set Firestore log level to silent to prevent benign idle stream disconnection logs
 try {
-  setLogLevel('error');
+  setLogLevel('silent');
 } catch {}
+
+// Client console filter for benign internal Firestore WebChannel idle stream cleanup
+if (typeof window !== 'undefined' && window.console && window.console.error) {
+  const origConsoleError = window.console.error.bind(window.console);
+  window.console.error = (...args: any[]) => {
+    const msg = args.map((a) => (typeof a === 'string' ? a : String(a))).join(' ');
+    if (
+      msg.includes('Disconnecting idle stream') ||
+      msg.includes('Timed out waiting for new targets') ||
+      msg.includes('GrpcConnection RPC')
+    ) {
+      return;
+    }
+    origConsoleError(...args);
+  };
+}
 import {
   getAuth,
   Auth,
@@ -115,9 +131,6 @@ export async function testConnection(): Promise<boolean> {
     return true;
   }
 }
-
-// Automatically test connection on boot
-testConnection().catch(() => {});
 
 // ----------------------------------------------------
 // AUTHENTICATION HELPERS

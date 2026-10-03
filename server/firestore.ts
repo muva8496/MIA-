@@ -20,7 +20,7 @@ import path from 'path';
 
 // Silence benign Firestore gRPC idle stream disconnection messages
 try {
-  setLogLevel('error');
+  setLogLevel('silent');
 } catch {}
 
 // Filter benign idle stream disconnection warnings from process.stderr
@@ -167,7 +167,7 @@ export async function fetchFirestoreDocument(collectionName: string, docId: stri
 
   try {
     const docRef = doc(db, collectionName, docId);
-    const snap = await getDoc(docRef);
+    const snap = await withTimeout(getDoc(docRef), 2000);
     if (!snap.exists()) return null;
     return { id: snap.id, ...snap.data() };
   } catch (err) {
@@ -183,7 +183,7 @@ export async function fetchFirestoreCollection(collectionName: string): Promise<
 
   try {
     const colRef = collection(db, collectionName);
-    const snapshot = await getDocs(colRef);
+    const snapshot = await withTimeout(getDocs(colRef), 2000);
     const result: Record<string, any> = {};
     snapshot.forEach((d) => {
       result[d.id] = { id: d.id, ...d.data() };

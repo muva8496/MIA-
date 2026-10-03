@@ -90,12 +90,10 @@ export async function setDocument(collectionName: string, docId: string, data: a
   memoryDb[collectionName][docId] = cleanData;
   saveDb();
 
-  // Await Firestore write to guarantee cloud persistence
-  try {
-    await syncDocToFirestore(collectionName, docId, cleanData);
-  } catch (e: any) {
-    console.warn(`[Firestore sync error] ${collectionName}/${docId}:`, e.message);
-  }
+  // Asynchronously sync to Firestore to ensure instant API responsiveness
+  syncDocToFirestore(collectionName, docId, cleanData).catch((e: any) => {
+    console.warn(`[Firestore sync error] ${collectionName}/${docId}:`, e?.message || e);
+  });
 
   return cleanData;
 }
@@ -110,11 +108,9 @@ export async function patchDocument(collectionName: string, docId: string, updat
   memoryDb[collectionName][docId] = merged;
   saveDb();
 
-  try {
-    await syncDocToFirestore(collectionName, docId, merged);
-  } catch (e: any) {
-    console.warn(`[Firestore sync error] ${collectionName}/${docId}:`, e.message);
-  }
+  syncDocToFirestore(collectionName, docId, merged).catch((e: any) => {
+    console.warn(`[Firestore sync error] ${collectionName}/${docId}:`, e?.message || e);
+  });
 
   return merged;
 }
@@ -124,11 +120,9 @@ export async function deleteDocument(collectionName: string, docId: string): Pro
     delete memoryDb[collectionName][docId];
     saveDb();
 
-    try {
-      await deleteDocFromFirestore(collectionName, docId);
-    } catch (e: any) {
-      console.warn(`[Firestore delete error] ${collectionName}/${docId}:`, e.message);
-    }
+    deleteDocFromFirestore(collectionName, docId).catch((e: any) => {
+      console.warn(`[Firestore delete error] ${collectionName}/${docId}:`, e?.message || e);
+    });
     return true;
   }
   return false;
